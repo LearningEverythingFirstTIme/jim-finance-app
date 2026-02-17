@@ -19,6 +19,50 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# Password protection
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+# Simple password check (change this to something more secure in production)
+APP_PASSWORD = "jim123"
+
+def check_password():
+    """Show login screen if not authenticated"""
+    if st.session_state.authenticated:
+        return True
+    
+    st.markdown("""
+    <style>
+        .login-container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #262730;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    st.title("🔐 Jim's Finance Tracker")
+    st.write("Please enter your password to access the app:")
+    
+    password = st.text_input("Password", type="password")
+    
+    if st.button("Login"):
+        if password == APP_PASSWORD:
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("Incorrect password. Please try again.")
+    
+    st.markdown("---")
+    st.caption("Contact Nick if you forgot your password")
+    return False
+
+if not check_password():
+    st.stop()
+
 # Custom dark theme CSS - Mobile responsive
 st.markdown("""
 <style>
@@ -267,10 +311,15 @@ st.title("💰 Jim's Finance Tracker")
 # Create a tab-like interface using radio buttons at the top
 page = st.radio(
     "Navigate",
-    pages,
+    pages + ["🔒 Logout"],
     horizontal=True,
     label_visibility="collapsed"
 )
+
+# Handle logout
+if page == "🔒 Logout":
+    st.session_state.authenticated = False
+    st.rerun()
 
 # Get current month/year for defaults
 today = date.today()
