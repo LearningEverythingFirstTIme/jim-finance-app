@@ -444,27 +444,36 @@ if page == "📊 Dashboard":
         if 'quick_type' not in st.session_state:
             st.session_state.quick_type = 'expense'
         
+        # Callback to update categories when type changes
+        def update_quick_category():
+            st.session_state.quick_category = None
+        
         col1, col2, col3, col4 = st.columns([2, 2, 1.5, 1.5], gap="small")
         
         with col1:
             quick_amount = st.number_input("Amount", min_value=0.01, step=0.01, format="%.2f", key="quick_amount", label_visibility="collapsed", placeholder="0.00")
         with col2:
-            quick_categories = get_categories()
-            quick_category = st.selectbox("Category", quick_categories['id'], format_func=lambda x: quick_categories[quick_categories['id'] == x]['icon'].values[0] + " " + quick_categories[quick_categories['id'] == x]['name'].values[0], key="quick_category", label_visibility="collapsed")
+            quick_type = st.selectbox("Type", ["expense", "income"], format_func=lambda x: "💸 Expense" if x == "expense" else "💵 Income", key="quick_type", label_visibility="visible", on_change=update_quick_category)
         with col3:
-            quick_type = st.selectbox("Type", ["expense", "income"], format_func=lambda x: "💸 Expense" if x == "expense" else "💵 Income", key="quick_type", label_visibility="visible")
+            # Filter categories based on transaction type
+            quick_categories = get_categories(st.session_state.quick_type)
+            # Reset category if it doesn't match the current type
+            current_cat = st.session_state.get('quick_category')
+            if current_cat is None or current_cat not in quick_categories['id'].values:
+                st.session_state.quick_category = quick_categories['id'].iloc[0] if not quick_categories.empty else None
+            quick_category = st.selectbox("Category", quick_categories['id'], index=list(quick_categories['id'].values).index(st.session_state.quick_category) if st.session_state.quick_category in quick_categories['id'].values else 0, format_func=lambda x: quick_categories[quick_categories['id'] == x]['icon'].values[0] + " " + quick_categories[quick_categories['id'] == x]['name'].values[0], key="quick_category", label_visibility="visible")
         with col4:
             quick_submit = st.button("➕ Add", key="quick_add_btn", use_container_width=True)
         
         quick_note = st.text_input("Note (optional)", key="quick_note", placeholder="Add a note...")
         
         if quick_submit:
-            if quick_amount > 0:
-                add_transaction(today, quick_amount, quick_category, quick_type, quick_note)
-                st.success(f"✅ Added: {quick_type} - ${quick_amount:,.2f}")
+            if quick_amount > 0 and quick_category:
+                add_transaction(today, quick_amount, quick_category, st.session_state.quick_type, quick_note)
+                st.success(f"✅ Added: {st.session_state.quick_type} - ${quick_amount:,.2f}")
                 st.rerun()
             else:
-                st.error("Please enter an amount")
+                st.error("Please enter an amount and select a category")
     
     # Onboarding message for empty state
     if is_empty:
@@ -577,16 +586,25 @@ elif page == "➕ Add Transaction":
     if 'add_tx_type' not in st.session_state:
         st.session_state.add_tx_type = 'expense'
     
+    # Callback to update categories when type changes
+    def update_add_category():
+        st.session_state.add_tx_category = None
+    
     col1, col2 = st.columns(2)
     
     with col1:
-        transaction_type = st.selectbox("Type", ["expense", "income"], format_func=lambda x: "💸 Expense" if x == "expense" else "💵 Income", key="add_tx_type")
+        transaction_type = st.selectbox("Type", ["expense", "income"], format_func=lambda x: "💸 Expense" if x == "expense" else "💵 Income", key="add_tx_type", on_change=update_add_category)
         date_val = st.date_input("Date", today)
     
     with col2:
         amount = st.number_input("Amount", min_value=0.01, step=0.01, format="%.2f")
         categories = get_categories(st.session_state.add_tx_type)
-        category = st.selectbox("Category", categories['id'], format_func=lambda x: categories[categories['id'] == x]['icon'].values[0] + " " + categories[categories['id'] == x]['name'].values[0])
+        # Reset category if it doesn't match the current type
+        current_cat = st.session_state.get('add_tx_category')
+        if current_cat is None or current_cat not in categories['id'].values:
+            st.session_state.add_tx_category = categories['id'].iloc[0] if not categories.empty else None
+        cat_index = list(categories['id'].values).index(st.session_state.add_tx_category) if st.session_state.add_tx_category in categories['id'].values else 0
+        category = st.selectbox("Category", categories['id'], index=cat_index, format_func=lambda x: categories[categories['id'] == x]['icon'].values[0] + " " + categories[categories['id'] == x]['name'].values[0], key="add_tx_category")
     
     notes = st.text_input("Notes (optional)")
     
