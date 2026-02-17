@@ -440,28 +440,31 @@ if page == "📊 Dashboard":
     
     # Quick Add Section (expandable)
     with st.expander("⚡ Quick Add Transaction", expanded=not is_empty):
-        with st.form("quick_add_form"):
-            col1, col2, col3, col4 = st.columns([2, 2, 1.5, 1.5], gap="small")
-            
-            with col1:
-                quick_amount = st.number_input("Amount", min_value=0.01, step=0.01, format="%.2f", key="quick_amount", label_visibility="collapsed", placeholder="0.00")
-            with col2:
-                quick_categories = get_categories()
-                quick_category = st.selectbox("Category", quick_categories['id'], format_func=lambda x: quick_categories[quick_categories['id'] == x]['icon'].values[0] + " " + quick_categories[quick_categories['id'] == x]['name'].values[0], key="quick_category", label_visibility="collapsed")
-            with col3:
-                quick_type = st.selectbox("Type", ["expense", "income"], format_func=lambda x: "💸" if x == "expense" else "💵", key="quick_type", label_visibility="collapsed")
-            with col4:
-                quick_submit = st.form_submit_button("➕ Add", use_container_width=True)
-            
-            quick_note = st.text_input("Note (optional)", key="quick_note", placeholder="Add a note...")
-            
-            if quick_submit:
-                if quick_amount > 0:
-                    add_transaction(today, quick_amount, quick_category, quick_type, quick_note)
-                    st.success(f"✅ Added: {quick_type} - ${quick_amount:,.2f}")
-                    st.rerun()
-                else:
-                    st.error("Please enter an amount")
+        # Use session state to preserve form values
+        if 'quick_type' not in st.session_state:
+            st.session_state.quick_type = 'expense'
+        
+        col1, col2, col3, col4 = st.columns([2, 2, 1.5, 1.5], gap="small")
+        
+        with col1:
+            quick_amount = st.number_input("Amount", min_value=0.01, step=0.01, format="%.2f", key="quick_amount", label_visibility="collapsed", placeholder="0.00")
+        with col2:
+            quick_categories = get_categories()
+            quick_category = st.selectbox("Category", quick_categories['id'], format_func=lambda x: quick_categories[quick_categories['id'] == x]['icon'].values[0] + " " + quick_categories[quick_categories['id'] == x]['name'].values[0], key="quick_category", label_visibility="collapsed")
+        with col3:
+            quick_type = st.selectbox("Type", ["expense", "income"], format_func=lambda x: "💸" if x == "expense" else "💵", key="quick_type", label_visibility="collapsed")
+        with col4:
+            quick_submit = st.button("➕ Add", key="quick_add_btn", use_container_width=True)
+        
+        quick_note = st.text_input("Note (optional)", key="quick_note", placeholder="Add a note...")
+        
+        if quick_submit:
+            if quick_amount > 0:
+                add_transaction(today, quick_amount, quick_category, quick_type, quick_note)
+                st.success(f"✅ Added: {quick_type} - ${quick_amount:,.2f}")
+                st.rerun()
+            else:
+                st.error("Please enter an amount")
     
     # Onboarding message for empty state
     if is_empty:
@@ -570,28 +573,29 @@ if page == "📊 Dashboard":
 elif page == "➕ Add Transaction":
     st.title("➕ Add Transaction")
     
-    with st.form("add_transaction_form"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            transaction_type = st.selectbox("Type", ["expense", "income"], format_func=lambda x: "💸 Expense" if x == "expense" else "💵 Income")
-            date_val = st.date_input("Date", today)
-        
-        with col2:
-            amount = st.number_input("Amount", min_value=0.01, step=0.01, format="%.2f")
-            categories = get_categories(transaction_type)
-            category = st.selectbox("Category", categories['id'], format_func=lambda x: categories[categories['id'] == x]['icon'].values[0] + " " + categories[categories['id'] == x]['name'].values[0])
-        
-        notes = st.text_input("Notes (optional)")
-        
-        submitted = st.form_submit_button("Add Transaction", width='stretch')
-        
-        if submitted:
-            if amount > 0:
-                add_transaction(date_val, amount, category, transaction_type, notes)
-                st.success(f"Transaction added: {transaction_type} of ${amount:,.2f}")
-            else:
-                st.error("Please enter a valid amount")
+    # Use session state to preserve form values
+    if 'add_tx_type' not in st.session_state:
+        st.session_state.add_tx_type = 'expense'
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        transaction_type = st.selectbox("Type", ["expense", "income"], format_func=lambda x: "💸 Expense" if x == "expense" else "💵 Income", key="add_tx_type")
+        date_val = st.date_input("Date", today)
+    
+    with col2:
+        amount = st.number_input("Amount", min_value=0.01, step=0.01, format="%.2f")
+        categories = get_categories(st.session_state.add_tx_type)
+        category = st.selectbox("Category", categories['id'], format_func=lambda x: categories[categories['id'] == x]['icon'].values[0] + " " + categories[categories['id'] == x]['name'].values[0])
+    
+    notes = st.text_input("Notes (optional)")
+    
+    if st.button("Add Transaction", width='stretch'):
+        if amount > 0:
+            add_transaction(date_val, amount, category, st.session_state.add_tx_type, notes)
+            st.success(f"Transaction added: {st.session_state.add_tx_type} of ${amount:,.2f}")
+        else:
+            st.error("Please enter a valid amount")
 
 # Page: Transactions
 elif page == "📋 Transactions":
